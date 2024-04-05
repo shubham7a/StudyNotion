@@ -95,7 +95,7 @@ exports.signup = async (req, res) => {
       accountType: accountType,
       approved: approved,
       additionalDetails: profileDetails._id,
-      image: "",
+      image: `https://api.dicebear.com/5.x/initials/svg?seed=${firstName} ${lastName}`,
     })
 
     return res.status(200).json({
@@ -128,7 +128,7 @@ exports.login = async (req, res) => {
     }
 
     // Find user with provided email
-    const user = await User.findOne({ email }).populate("additionalDetails")
+    const user = await User.findOne({ email }).populate("additionalDetails");
 
     // If user not found with provided email
     if (!user) {
@@ -142,7 +142,7 @@ exports.login = async (req, res) => {
     // Generate JWT token and Compare Password
     if (await bcrypt.compare(password, user.password)) {
       const token = jwt.sign(
-        { email: user.email, id: user._id, role: user.role },
+        { email: user.email, id: user._id, accountType: user.accountType },
         process.env.JWT_SECRET,
         {
           expiresIn: "24h",
@@ -232,7 +232,7 @@ exports.changePassword = async (req, res) => {
     const userDetails = await User.findById(req.user.id)
 
     // Get old password, new password, and confirm new password from req.body
-    const { oldPassword, newPassword } = req.body
+    const { oldPassword, newPassword ,confirmNewPassword} = req.body
 
     // Validate old password
     const isPasswordMatch = await bcrypt.compare(
@@ -245,6 +245,16 @@ exports.changePassword = async (req, res) => {
         .status(401)
         .json({ success: false, message: "The password is incorrect" })
     }
+
+
+    // Match new password and confirm new password
+		if (newPassword !== confirmNewPassword) {
+			// If new password and confirm new password do not match, return a 400 (Bad Request) error
+			return res.status(400).json({
+				success: false,
+				message: "The password and confirm password does not match",
+			});
+		}
 
     // Update password
     const encryptedPassword = await bcrypt.hash(newPassword, 10)
